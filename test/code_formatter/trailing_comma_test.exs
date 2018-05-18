@@ -5,7 +5,6 @@ defmodule Code.Formatter.TrailingCommaTest do
 
   import CodeFormatterHelpers
 
-  @short_length [line_length: 10]
   @medium_length [line_length: 20]
   @trailing_comma [trailing_comma: true]
 

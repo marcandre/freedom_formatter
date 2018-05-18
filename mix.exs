@@ -7,7 +7,19 @@ defmodule FreedomFormatter.MixProject do
       version: "1.0.0",
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
+      aliases: [
+        docs: "docs --source-url https://github.com/gamache/freedom_formatter"
+      ]
+    ]
+  end
+
+  def package do
+    [
+      licenses: ["Apache 2.0"],
+      maintainers: ["pete gamache <pete@gamache.org"],
+      links: %{github: "https://github.com/gamache/freedom_formatter"}
     ]
   end
 
