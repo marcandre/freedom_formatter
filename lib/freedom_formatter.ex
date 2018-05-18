@@ -1,8 +1,11 @@
 defmodule FreedomFormatter do
   @moduledoc ~S"""
   Freedom Formatter is a fork of Elixir's code formatter,
-  with added freedom.  It respects `.formatter.exs` and
-  supports all features of the standard code formatter.
+  with added freedom.
+
+  It respects `.formatter.exs` and supports all features of
+  the standard code formatter, as well as additional features
+  unlikely to arrive soon in core Elixir.
 
   ## Usage
 
@@ -27,6 +30,16 @@ defmodule FreedomFormatter do
   information.
 
   Thanks to software freedom, we can use tomorrow's formatter today.
+
+  ## Project Goals
+
+  * To provide a compatible alternative to the Elixir formatter,
+    available separately from the core Elixir distribution
+  * To allow developers and teams to benefit from standardized code
+    formatting while retaining a style they find more productive
+  * To be a testbed for new formatting features and options,
+    maintaining the easiest possible path to possible inclusion in
+    core Elixir.
 
   ## Added features
 
@@ -71,6 +84,11 @@ defmodule FreedomFormatter do
       at the given version to their non-deprecated equivalent. It
       expects a valid `Version` which is usually the minimum Elixir
       version supported by the project.
+
+    * `:trailing_comma` - if set `true`, multi-line list, map, and
+      struct literals will include a trailing comma after the last item
+      or pair in the data structure. Does not affect argument lists,
+      tuples, or lists/maps/structs rendered on a single line.
 
   ## Design principles
 
