@@ -20,8 +20,11 @@ defmodule FreedomFormatter do
 
   ## Why
 
-  Elixir's code formatter does not currently wish to support trailing
-  commas, or indeed any additional settings, until at least January 2019.
+  Elixir's code formatter does not intend to support trailing commas,
+  or indeed any additional settings, until at least January 2019.
+  See Elixir issues [#7689](https://github.com/elixir-lang/elixir/pull/7689)
+  and [#6646](https://github.com/elixir-lang/elixir/issues/6646) for more
+  information.
 
   Thanks to software freedom, we can use tomorrow's formatter today.
 

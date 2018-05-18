@@ -3,8 +3,9 @@
 A fork of Elixir's code formatter, with added freedom.
 [![Build Status](https://travis-ci.org/gamache/freedom_formatter.svg?branch=master)](https://travis-ci.org/gamache/freedom_formatter) [![Hex.pm Version](http://img.shields.io/hexpm/v/freedom_formatter.svg?style=flat)](https://hex.pm/packages/freedom_formatter)
 
-Respects `.formatter.exs` and supports all features of the
-standard code formatter.
+Freedom Formatter respects `.formatter.exs` and supports all
+features of the standard code formatter, as well as additional
+features unlikely to arrive soon in core Elixir.
 
 <img src="https://gamache.github.io/images/freedom-formatter.jpg"
 alt="Freedom Formatter">
@@ -25,10 +26,23 @@ mix fformat
 
 ## Why
 
-Elixir's code formatter does not currently wish to support trailing
-commas, or indeed any additional settings, until at least January 2019.
+Elixir's code formatter does not intend to support trailing commas,
+or indeed any additional settings, until at least January 2019.
+See Elixir issues [#7689](https://github.com/elixir-lang/elixir/pull/7689)
+and [#6646](https://github.com/elixir-lang/elixir/issues/6646) for more
+information.
 
 Thanks to software freedom, we can use tomorrow's formatter today.
+
+## Project Goals
+
+* To provide a compatible alternative to the Elixir formatter,
+  available separately from the core Elixir distribution
+* To allow developers and teams to benefit from standardized code
+  formatting while retaining a style they find more productive
+* To be a testbed for new formatting features and options,
+  maintaining the easiest possible path to possible inclusion in
+  core Elixir.
 
 ## Added features
 
