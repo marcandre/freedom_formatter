@@ -309,7 +309,7 @@ defmodule FreedomFormatter do
   @spec format_string!(binary, keyword) :: iodata
   def format_string!(string, opts \\ []) when is_binary(string) and is_list(opts) do
     line_length = Keyword.get(opts, :line_length, 98)
-    algebra = Code.Formatter.to_algebra!(string, opts)
+    algebra = FreedomFormatter.Formatter.to_algebra!(string, opts)
     Inspect.Algebra.format(algebra, line_length)
   end
 
