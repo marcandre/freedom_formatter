@@ -1,4 +1,5 @@
-# Used by "mix format" and "mix fformat"
+# These parameters should not deviate from the Elixir .formatter.exs,
+# so that merges are easy
 [
   inputs: ["mix.exs", "{config,lib,test}/**/*.{ex,exs}"],
   locals_without_parens: [
