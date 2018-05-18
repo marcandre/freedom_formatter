@@ -1,11 +1,44 @@
 defmodule FreedomFormatter do
   @moduledoc ~S"""
-  FreedomFormatter is a fork of Elixir's standard code formatter,
-  with added freedom.
+  Freedom Formatter is a fork of Elixir's code formatter,
+  with added freedom.  It respects `.formatter.exs` and
+  supports all features of the standard code formatter.
 
-  Use it with `mix fformat`,
-  `FreedomFormatter.format_string!/2`, or
-  `FreedomFormatter.format_file!/2`.
+  ## Usage
+
+  Install:
+
+  ```elixir
+  {:freedom_formatter, "~> 1.0", only: :dev}
+  ```
+
+  Run:
+
+  ```bash
+  mix fformat
+  ```
+
+  ## Why
+
+  Elixir's code formatter does not currently wish to support trailing
+  commas, or indeed any additional settings, until at least January 2019.
+
+  Thanks to software freedom, we can use tomorrow's formatter today.
+
+  ## Added features
+
+  Freedom Formatter supports all Elixir's standard code formatting
+  options, as well as:
+
+  * `:trailing_comma` - if set `true`, multi-line list, map, and
+    struct literals will include a trailing comma after the last item
+    or pair in the data structure. Does not affect argument lists,
+    tuples, or lists/maps/structs rendered on a single line.
+
+  ## Thanks
+
+  Thanks to José Valim for hacking together a code formatter and
+  getting it almost perfect. :)
   """
 
   @doc ~S"""
