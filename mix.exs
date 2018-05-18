@@ -19,7 +19,7 @@ defmodule FreedomFormatter.MixProject do
   def package do
     [
       licenses: ["Apache 2.0"],
-      maintainers: ["pete gamache <pete@gamache.org"],
+      maintainers: ["pete gamache <pete@gamache.org>"],
       links: %{github: "https://github.com/gamache/freedom_formatter"}
     ]
   end
