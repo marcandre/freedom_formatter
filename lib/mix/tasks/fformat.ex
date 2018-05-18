@@ -393,7 +393,12 @@ defmodule Mix.Tasks.Fformat do
 
   defp format_file({file, formatter_opts}, task_opts) do
     {input, extra_opts} = read_file(file)
-    output = IO.iodata_to_binary([Code.format_string!(input, extra_opts ++ formatter_opts), ?\n])
+
+    output =
+      IO.iodata_to_binary([
+        FreedomFormatter.format_string!(input, extra_opts ++ formatter_opts),
+        ?\n
+      ])
 
     check_equivalent? = Keyword.get(task_opts, :check_equivalent, false)
     check_formatted? = Keyword.get(task_opts, :check_formatted, false)
