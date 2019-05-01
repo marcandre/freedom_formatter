@@ -236,11 +236,11 @@ defmodule Code.Formatter.CallsTest do
 
       bad = """
       foo(:hello, foo: 1,
-        bar: 2)
+        bar: 2, baz: 3)
       """
 
       assert_format bad, """
-      foo(:hello, foo: 1, bar: 2)
+      foo(:hello, foo: 1, bar: 2, baz: 3)
       """
     end
 
@@ -415,33 +415,33 @@ defmodule Code.Formatter.CallsTest do
     end
 
     test "without parens on unique argument" do
-      assert_same "foo(all 1, 2, 3)"
-      assert_same "foo(bar, all(1, 2, 3))"
-      assert_same "check all 1, 2, 3"
-      assert_same "check foo, all(1, 2, 3)"
+      assert_same "foo(for 1, 2, 3)"
+      assert_same "foo(bar, for(1, 2, 3))"
+      assert_same "assert for 1, 2, 3"
+      assert_same "assert foo, for(1, 2, 3)"
 
       assert_same """
-      check all 1, 2, 3 do
+      assert for 1, 2, 3 do
         :ok
       end
       """
 
       assert_same """
-      check foo, all(1, 2, 3) do
+      assert foo, for(1, 2, 3) do
         :ok
       end
       """
 
       assert_same """
-      check all(1, 2, 3) do
+      assert for(1, 2, 3) do
         :ok
       end
       """
 
       assert_same """
-      check (all 1, 2, 3 do
-               :ok
-             end)
+      assert (for 1, 2, 3 do
+                :ok
+              end)
       """
     end
 
@@ -834,6 +834,20 @@ defmodule Code.Formatter.CallsTest do
   describe "do-end blocks" do
     test "with non-block keywords" do
       assert_same "foo(do: nil)"
+    end
+
+    test "with forced block keywords" do
+      good = """
+      foo do
+        nil
+      end
+      """
+
+      assert_format "foo(do: nil)", good, force_do_end_blocks: true
+
+      # Avoid false positives
+      assert_same "foo(do: 1, do: 2)", force_do_end_blocks: true
+      assert_same "foo(do: 1, another: 2)", force_do_end_blocks: true
     end
 
     test "with multiple keywords" do
