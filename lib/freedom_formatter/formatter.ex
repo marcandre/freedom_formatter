@@ -49,7 +49,7 @@ defmodule FreedomFormatter.Formatter do
     :<>
   ]
 
-  locals_without_parens = [
+  @locals_without_parens [
     # Special forms
     alias: 1,
     alias: 2,
@@ -98,7 +98,6 @@ defmodule FreedomFormatter.Formatter do
     defrecordp: 3,
 
     # Testing
-    all: :*,
     assert: 1,
     assert: 2,
     assert_in_delta: 3,
@@ -110,12 +109,8 @@ defmodule FreedomFormatter.Formatter do
     assert_receive: 3,
     assert_received: 1,
     assert_received: 2,
-    check: 1,
-    check: 2,
     doctest: 1,
     doctest: 2,
-    property: 1,
-    property: 2,
     refute: 1,
     refute: 2,
     refute_in_delta: 3,
@@ -138,7 +133,7 @@ defmodule FreedomFormatter.Formatter do
     import_config: 1
   ]
 
-  @locals_without_parens MapSet.new(locals_without_parens)
+  @do_end_keywords [:rescue, :catch, :else, :after]
 
   @doc """
   Checks if two strings are equivalent.
@@ -202,7 +197,12 @@ defmodule FreedomFormatter.Formatter do
     charlist = String.to_charlist(string)
 
     Process.put(:code_formatter_comments, [])
-    tokenizer_options = [unescape: false, preserve_comments: &preserve_comments/5]
+
+    tokenizer_options = [
+      unescape: false,
+      preserve_comments: &preserve_comments/5,
+      warn_on_unnecessary_quotes: false
+    ]
 
     with {:ok, tokens} <- :elixir.string_to_tokens(charlist, line, file, tokenizer_options),
          {:ok, forms} <- :elixir.tokens_to_quoted(tokens, file, formatter_metadata: true) do
@@ -224,7 +224,7 @@ defmodule FreedomFormatter.Formatter do
 
   Raises if the `string` cannot be parsed.
 
-  See `format!/2` for the list of options.
+  See `Code.format_string!/2` for the list of options.
   """
   def to_algebra!(string, opts \\ []) do
     case to_algebra(string, opts) do
@@ -237,6 +237,8 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp state(comments, opts) do
+    force_do_end_blocks = Keyword.get(opts, :force_do_end_blocks, false)
+
     rename_deprecated_at =
       if version = opts[:rename_deprecated_at] do
         case Version.parse(version) do
@@ -250,13 +252,10 @@ defmodule FreedomFormatter.Formatter do
       end
 
     locals_without_parens =
-      opts
-      |> Keyword.get(:locals_without_parens, [])
-      |> MapSet.new()
-      |> MapSet.union(@locals_without_parens)
-      |> MapSet.to_list()
+      Keyword.get(opts, :locals_without_parens, []) ++ @locals_without_parens
 
     %{
+      force_do_end_blocks: force_do_end_blocks,
       locals_without_parens: locals_without_parens,
       operand_nesting: 2,
       rename_deprecated_at: rename_deprecated_at,
@@ -363,24 +362,24 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp quoted_to_algebra(
-         {{:., _, [String, :to_charlist]}, _, [{:<<>>, meta, entries}]} = quoted,
+         {{:., _, [List, :to_charlist]}, meta, [entries]} = quoted,
          context,
          state
        ) do
     cond do
-      not interpolated?(entries) ->
+      not list_interpolated?(entries) ->
         remote_to_algebra(quoted, context, state)
 
       meta[:format] == :list_heredoc ->
         {doc, state} =
           entries
           |> prepend_heredoc_line()
-          |> interpolation_to_algebra(:heredoc, state, @single_heredoc, @single_heredoc)
+          |> list_interpolation_to_algebra(:heredoc, state, @single_heredoc, @single_heredoc)
 
         {force_unfit(doc), state}
 
       true ->
-        interpolation_to_algebra(entries, @single_quote, state, @single_quote, @single_quote)
+        list_interpolation_to_algebra(entries, @single_quote, state, @single_quote, @single_quote)
     end
   end
 
@@ -523,7 +522,7 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp quoted_to_algebra({:fn, meta, [_ | _] = clauses}, _context, state) do
-    anon_fun_to_algebra(clauses, line(meta), end_line(meta), state)
+    anon_fun_to_algebra(clauses, line(meta), end_line(meta), state, eol?(meta))
   end
 
   defp quoted_to_algebra({fun, meta, args}, context, state) when is_atom(fun) and is_list(args) do
@@ -712,14 +711,21 @@ defmodule FreedomFormatter.Formatter do
         {concat(op_string, doc), @empty, newlines, state}
     end
 
-    operand_to_algebra_with_comments(
-      operands,
-      meta,
-      min_line,
-      max_line,
-      state,
-      operand_to_algebra
-    )
+    {doc, state} =
+      operand_to_algebra_with_comments(
+        operands,
+        meta,
+        min_line,
+        max_line,
+        state,
+        operand_to_algebra
+      )
+
+    if keyword?(right_arg) and context in [:parens_arg, :no_parens_arg] do
+      {wrap_in_parens(doc), state}
+    else
+      {doc, state}
+    end
   end
 
   defp binary_op_to_algebra(op, _, meta, left_arg, right_arg, context, state, _nesting)
@@ -768,13 +774,16 @@ defmodule FreedomFormatter.Formatter do
           concat(concat(group(left), op_string), group(right))
 
         true ->
+          eol? = eol?(meta)
+
           next_break_fits? =
-            op in @next_break_fits_operators and next_break_fits?(right_arg, state) and
-              not Keyword.get(meta, :eol, false)
+            op in @next_break_fits_operators and next_break_fits?(right_arg, state) and not eol?
 
           with_next_break_fits(next_break_fits?, right, fn right ->
             op_string = " " <> op_string
-            concat(group(left), group(nest(glue(op_string, group(right)), nesting, :break)))
+            right = nest(glue(op_string, group(right)), nesting, :break)
+            right = if eol?, do: force_unfit(right), else: right
+            concat(group(left), group(right))
           end)
       end
 
@@ -782,7 +791,7 @@ defmodule FreedomFormatter.Formatter do
   end
 
   # TODO: We can remove this workaround once we remove
-  # ?rearrange_uop from the parser in Elixir v2.0.
+  # ?rearrange_uop from the parser on v2.0.
   # (! left) in right
   # (not left) in right
   defp binary_operand_to_algebra(
@@ -873,7 +882,7 @@ defmodule FreedomFormatter.Formatter do
     {docs, comments?, state} =
       quoted_to_algebra_with_comments(operands, [], min_line, max_line, 1, state, fun)
 
-    if comments? or Keyword.get(meta, :eol, false) do
+    if comments? or eol?(meta) do
       {docs |> Enum.reduce(&line(&2, &1)) |> force_unfit(), state}
     else
       {docs |> Enum.reduce(&glue(&2, &1)), state}
@@ -1044,10 +1053,12 @@ defmodule FreedomFormatter.Formatter do
   end
 
   # We can only rename functions in the same module because
-  # introducing a new module may wrong due to aliases.
+  # introducing a new module may be wrong due to aliases.
   defp deprecated(Enum, :partition, 2), do: {"split_with", "~> 1.4"}
   defp deprecated(Code, :unload_files, 2), do: {"unrequire_files", "~> 1.7"}
   defp deprecated(Code, :loaded_files, 2), do: {"required_files", "~> 1.7"}
+  defp deprecated(Kernel.ParallelCompiler, :files, 2), do: {"compile", "~> 1.6"}
+  defp deprecated(Kernel.ParallelCompiler, :files_to_path, 2), do: {"compile_to_path", "~> 1.6"}
   defp deprecated(_, _, _), do: :error
 
   defp remote_target_to_algebra({:fn, _, [_ | _]} = quoted, state) do
@@ -1098,7 +1109,7 @@ defmodule FreedomFormatter.Formatter do
   defp call_args_to_algebra(args, meta, context, parens, list_to_keyword?, state) do
     {rest, last} = split_last(args)
 
-    if blocks = do_end_blocks(last) do
+    if blocks = do_end_blocks(last, state) do
       {call_doc, state} =
         if rest == [] do
           {" do", state}
@@ -1133,79 +1144,110 @@ defmodule FreedomFormatter.Formatter do
         if skip_parens?, do: :no_parens_arg, else: :parens_arg
       end
 
-    if left != [] and keyword? and skip_parens? and no_generators?(args) do
-      call_args_to_algebra_with_no_parens_keywords(meta, left, right, context, extra, state)
-    else
-      args = if keyword?, do: left ++ right, else: left ++ [right]
-      many_eol? = match?([_, _ | _], args) and Keyword.get(meta, :eol, false)
-      join = if force_args?(args) or many_eol?, do: :line, else: :break
-
-      next_break_fits? = join == :break and next_break_fits?(right, state)
-      last_arg_mode = if next_break_fits?, do: :next_break_fits, else: :none
-
-      {args_doc, _join, state} =
-        args_to_algebra_with_comments(
-          args,
-          meta,
-          skip_parens?,
-          last_arg_mode,
-          join,
-          state,
-          &quoted_to_algebra(&1, context, &2)
-        )
-
-      # If we have a single argument, then we won't have an option to break
-      # before the "extra" part, so we ungroup it and build it later.
-      args_doc = ungroup_if_group(args_doc)
-
-      doc =
-        if skip_parens? do
-          " "
-          |> concat(nest(args_doc, :cursor, :break))
-          |> concat(extra)
-          |> group()
-        else
-          glue("(", "", args_doc)
-          |> nest(2, :break)
-          |> glue("", ")")
-          |> concat(extra)
-          |> group()
-        end
-
-      if next_break_fits? do
-        {next_break_fits(doc, :disabled), state}
-      else
-        {doc, state}
-      end
-    end
-  end
-
-  defp call_args_to_algebra_with_no_parens_keywords(meta, left, right, context, extra, state) do
+    args = if keyword?, do: left ++ right, else: left ++ [right]
+    many_eol? = match?([_, _ | _], args) and eol?(meta)
+    no_generators? = no_generators?(args)
     to_algebra_fun = &quoted_to_algebra(&1, context, &2)
-    join = if force_args?(left), do: :line, else: :break
 
-    {left_doc, _join, state} =
-      args_to_algebra_with_comments(left, meta, true, :force_comma, join, state, to_algebra_fun)
+    {args_doc, next_break_fits?, state} =
+      if left != [] and keyword? and no_generators? do
+        join = if force_args?(left) or many_eol?, do: :line, else: :break
 
-    join = if force_args?(right) or force_args?(left ++ right), do: :line, else: :break
+        {left_doc, _join, state} =
+          args_to_algebra_with_comments(
+            left,
+            Keyword.delete(meta, :end_line),
+            skip_parens?,
+            :force_comma,
+            join,
+            state,
+            to_algebra_fun
+          )
 
-    {right_doc, _join, state} =
-      args_to_algebra_with_comments(right, meta, false, :none, join, state, to_algebra_fun)
+        join = if force_args?(right) or force_args?(args) or many_eol?, do: :line, else: :break
 
-    right_doc = apply(Inspect.Algebra, join, []) |> concat(right_doc) |> group(:inherit)
+        {right_doc, _join, state} =
+          args_to_algebra_with_comments(right, meta, false, :none, join, state, to_algebra_fun)
+
+        right_doc = apply(Inspect.Algebra, join, []) |> concat(right_doc)
+
+        args_doc =
+          if skip_parens? do
+            left_doc
+            |> concat(next_break_fits(group(right_doc, :inherit), :enabled))
+            |> nest(:cursor, :break)
+          else
+            right_doc =
+              right_doc
+              |> nest(2, :break)
+              |> concat(break(""))
+              |> group(:inherit)
+              |> next_break_fits(:enabled)
+
+            concat(nest(left_doc, 2, :break), right_doc)
+          end
+
+        {args_doc, true, state}
+      else
+        join = if force_args?(args) or many_eol?, do: :line, else: :break
+        next_break_fits? = join == :break and next_break_fits?(right, state)
+        last_arg_mode = if next_break_fits?, do: :next_break_fits, else: :none
+
+        {args_doc, _join, state} =
+          args_to_algebra_with_comments(
+            args,
+            meta,
+            skip_parens?,
+            last_arg_mode,
+            join,
+            state,
+            to_algebra_fun
+          )
+
+        # If we have a single argument, then we won't have an option to break
+        # before the "extra" part, so we ungroup it and build it later.
+        args_doc = ungroup_if_group(args_doc)
+
+        args_doc =
+          if skip_parens? do
+            nest(args_doc, :cursor, :break)
+          else
+            nest(args_doc, 2, :break) |> concat(break(""))
+          end
+
+        {args_doc, next_break_fits?, state}
+      end
 
     doc =
-      with_next_break_fits(true, right_doc, fn right_doc ->
-        args_doc = concat(left_doc, right_doc)
+      cond do
+        left != [] and keyword? and skip_parens? and no_generators? ->
+          " "
+          |> concat(args_doc)
+          |> nest(2)
+          |> concat(extra)
+          |> group()
 
-        " "
-        |> concat(nest(args_doc, :cursor, :break))
-        |> nest(2)
-        |> concat(extra)
-        |> group()
-      end)
+        skip_parens? ->
+          " "
+          |> concat(args_doc)
+          |> concat(extra)
+          |> group()
 
-    {doc, state}
+        true ->
+          "("
+          |> concat(break(""))
+          |> nest(2, :break)
+          |> concat(args_doc)
+          |> concat(")")
+          |> concat(extra)
+          |> group()
+      end
+
+    if next_break_fits? do
+      {next_break_fits(doc, :disabled), state}
+    else
+      {doc, state}
+    end
   end
 
   defp local_without_parens?(fun, args, %{locals_without_parens: locals_without_parens}) do
@@ -1221,16 +1263,19 @@ defmodule FreedomFormatter.Formatter do
     not Enum.any?(args, &match?({:<-, _, [_, _]}, &1))
   end
 
-  defp do_end_blocks([{{:__block__, meta, [:do]}, _} | _] = blocks) do
-    if meta[:format] == :block do
+  defp do_end_blocks([{{:__block__, meta, [:do]}, _} | rest] = blocks, state) do
+    if meta[:format] == :block or can_force_do_end_blocks?(rest, state) do
       blocks
       |> Enum.map(fn {{:__block__, meta, [key]}, value} -> {key, line(meta), value} end)
       |> do_end_blocks_with_range(end_line(meta))
     end
   end
 
-  defp do_end_blocks(_) do
-    nil
+  defp do_end_blocks(_, _), do: nil
+
+  defp can_force_do_end_blocks?(rest, state) do
+    state.force_do_end_blocks and
+      Enum.all?(rest, fn {{:__block__, _, [key]}, _} -> key in @do_end_keywords end)
   end
 
   defp do_end_blocks_with_range([{key1, line1, value1}, {_, line2, _} = h | t], end_line) do
@@ -1259,6 +1304,14 @@ defmodule FreedomFormatter.Formatter do
 
   ## Interpolation
 
+  defp list_interpolated?(entries) do
+    Enum.all?(entries, fn
+      {{:., _, [Kernel, :to_string]}, _, [_]} -> true
+      entry when is_binary(entry) -> true
+      _ -> false
+    end)
+  end
+
   defp interpolated?(entries) do
     Enum.all?(entries, fn
       {:::, _, [{{:., _, [Kernel, :to_string]}, _, [_]}, {:binary, _, _}]} -> true
@@ -1273,6 +1326,23 @@ defmodule FreedomFormatter.Formatter do
 
   defp prepend_heredoc_line(entries) do
     ["\n" | entries]
+  end
+
+  defp list_interpolation_to_algebra([entry | entries], escape, state, acc, last)
+       when is_binary(entry) do
+    acc = concat(acc, escape_string(entry, escape))
+    list_interpolation_to_algebra(entries, escape, state, acc, last)
+  end
+
+  defp list_interpolation_to_algebra([entry | entries], escape, state, acc, last) do
+    {{:., _, [Kernel, :to_string]}, meta, [quoted]} = entry
+    {doc, state} = block_to_algebra(quoted, line(meta), end_line(meta), state)
+    doc = surround("\#{", doc, "}")
+    list_interpolation_to_algebra(entries, escape, state, concat(acc, doc), last)
+  end
+
+  defp list_interpolation_to_algebra([], _escape, state, acc, last) do
+    {concat(acc, last), state}
   end
 
   defp interpolation_to_algebra([entry | entries], escape, state, acc, last)
@@ -1330,7 +1400,7 @@ defmodule FreedomFormatter.Formatter do
 
   defp bitstring_to_algebra(meta, args, state) do
     last = length(args) - 1
-    join = if Keyword.get(meta, :eol, false), do: :line, else: :flex_break
+    join = if eol?(meta), do: :line, else: :flex_break
     to_algebra_fun = &bitstring_segment_to_algebra(&1, &2, last)
 
     {args_doc, join, state} =
@@ -1398,22 +1468,22 @@ defmodule FreedomFormatter.Formatter do
   ## Literals
 
   defp list_to_algebra(meta, args, state) do
-    join = if Keyword.get(meta, :eol, false), do: :line, else: :break
+    join = if eol?(meta), do: :line, else: :break
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
 
     {args_doc, _join, state} =
-      args_to_algebra_with_comments(args, meta, false, :state, join, state, fun)
+      args_to_algebra_with_comments(args, meta, false, :none, join, state, fun)
 
     {surround("[", args_doc, "]"), state}
   end
 
   defp map_to_algebra(meta, name_doc, [{:|, _, [left, right]}], state) do
-    join = if Keyword.get(meta, :eol, false), do: :line, else: :break
+    join = if eol?(meta), do: :line, else: :break
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
     {left_doc, state} = fun.(left, state)
 
     {right_doc, _join, state} =
-      args_to_algebra_with_comments(right, meta, false, :state, join, state, fun)
+      args_to_algebra_with_comments(right, meta, false, :none, join, state, fun)
 
     args_doc =
       left_doc
@@ -1425,18 +1495,18 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp map_to_algebra(meta, name_doc, args, state) do
-    join = if Keyword.get(meta, :eol, false), do: :line, else: :break
+    join = if eol?(meta), do: :line, else: :break
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
 
     {args_doc, _join, state} =
-      args_to_algebra_with_comments(args, meta, false, :state, join, state, fun)
+      args_to_algebra_with_comments(args, meta, false, :none, join, state, fun)
 
     name_doc = "%" |> concat(name_doc) |> concat("{")
     {surround(name_doc, args_doc, "}"), state}
   end
 
   defp tuple_to_algebra(meta, args, join, state) do
-    join = if Keyword.get(meta, :eol, false), do: :line, else: join
+    join = if eol?(meta), do: :line, else: join
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
 
     {args_doc, join, state} =
@@ -1557,28 +1627,25 @@ defmodule FreedomFormatter.Formatter do
     arg_to_algebra = fn arg, args, newlines, state ->
       {doc, state} = fun.(arg, state)
 
-      {doc, state} =
+      doc =
         case args do
-          [{:|, _, _}] ->
-            {concat_to_last_group(doc, ","), Map.put(state, :trailing_cons, true)}
-
           [_ | _] ->
-            {concat_to_last_group(doc, ","), state}
+            concat_to_last_group(doc, ",")
 
           [] when last_arg_mode == :force_comma ->
-            {concat_to_last_group(doc, ","), state}
+            concat_to_last_group(doc, ",")
 
           [] when last_arg_mode == :next_break_fits ->
-            {next_break_fits(doc, :enabled), state}
+            next_break_fits(doc, :enabled)
 
           [] when last_arg_mode == :none ->
-            {doc, state}
+            doc
 
           [] when last_arg_mode == :state ->
             if !Map.get(state, :trailing_cons) && state.trailing_comma && join == :line do
-              {concat_to_last_group(doc, ","), state}
+              concat_to_last_group(doc, ",")
             else
-              {doc, state}
+              doc
             end
         end
 
@@ -1618,7 +1685,13 @@ defmodule FreedomFormatter.Formatter do
   ## Anonymous functions
 
   # fn -> block end
-  defp anon_fun_to_algebra([{:->, meta, [[], body]}] = clauses, _min_line, max_line, state) do
+  defp anon_fun_to_algebra(
+         [{:->, meta, [[], body]}] = clauses,
+         _min_line,
+         max_line,
+         state,
+         _multi_clauses_style
+       ) do
     min_line = line(meta)
     {body_doc, state} = block_to_algebra(body, min_line, max_line, state)
 
@@ -1637,7 +1710,13 @@ defmodule FreedomFormatter.Formatter do
   # fn x ->
   #   y
   # end
-  defp anon_fun_to_algebra([{:->, meta, [args, body]}] = clauses, _min_line, max_line, state) do
+  defp anon_fun_to_algebra(
+         [{:->, meta, [args, body]}] = clauses,
+         _min_line,
+         max_line,
+         state,
+         false = _multi_clauses_style
+       ) do
     min_line = line(meta)
     {args_doc, state} = clause_args_to_algebra(args, min_line, state)
     {body_doc, state} = block_to_algebra(body, min_line, max_line, state)
@@ -1667,7 +1746,7 @@ defmodule FreedomFormatter.Formatter do
   #   args2 ->
   #     block2
   # end
-  defp anon_fun_to_algebra(clauses, min_line, max_line, state) do
+  defp anon_fun_to_algebra(clauses, min_line, max_line, state, _multi_clauses_style) do
     {clauses_doc, state} = clauses_to_algebra(clauses, min_line, max_line, state)
     {"fn" |> line(clauses_doc) |> nest(2) |> line("end") |> force_unfit(), state}
   end
@@ -1724,7 +1803,7 @@ defmodule FreedomFormatter.Formatter do
   ## Clauses
 
   defp maybe_force_clauses(doc, clauses) do
-    if Enum.any?(clauses, fn {:->, meta, _} -> Keyword.get(meta, :eol, false) end) do
+    if Enum.any?(clauses, fn {:->, meta, _} -> eol?(meta) end) do
       force_unfit(doc)
     else
       doc
@@ -1790,13 +1869,19 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp clause_args_to_algebra(args, min_line, state) do
-    meta = [line: min_line]
-    fun = &clause_args_to_algebra/2
+    arg_to_algebra = fn arg, _args, newlines, state ->
+      {doc, state} = clause_args_to_algebra(arg, state)
+      {doc, @empty, newlines, state}
+    end
 
-    {args_docs, _join, state} =
-      args_to_algebra_with_comments([args], meta, false, :none, :break, state, fun)
+    {args_docs, comments?, state} =
+      quoted_to_algebra_with_comments([args], [], min_line, @min_line, 1, state, arg_to_algebra)
 
-    {args_docs, state}
+    if comments? do
+      {Enum.reduce(args_docs, &line(&2, &1)), state}
+    else
+      {Enum.reduce(args_docs, &glue(&2, &1)), state}
+    end
   end
 
   # fn a, b, c when d -> e end
@@ -1948,7 +2033,7 @@ defmodule FreedomFormatter.Formatter do
   end
 
   # TODO: We can remove this workaround once we remove
-  # ?rearrange_uop from the parser in Elixir v2.0.
+  # ?rearrange_uop from the parser on v2.0.
   defp wrap_in_parens_if_operator(doc, {:__block__, _, [expr]}) do
     wrap_in_parens_if_operator(doc, expr)
   end
@@ -2054,7 +2139,7 @@ defmodule FreedomFormatter.Formatter do
       (not interpolated?(entries) and eol_or_comments?(meta, state))
   end
 
-  defp next_break_fits?({{:., _, [String, :to_charlist]}, _, [{:<<>>, meta, [_ | _]}]}, _state) do
+  defp next_break_fits?({{:., _, [List, :to_charlist]}, meta, [[_ | _]]}, _state) do
     meta[:format] == :list_heredoc
   end
 
@@ -2088,7 +2173,7 @@ defmodule FreedomFormatter.Formatter do
   end
 
   defp eol_or_comments?(meta, %{comments: comments}) do
-    Keyword.get(meta, :eol, false) or
+    eol?(meta) or
       (
         min_line = line(meta)
         max_line = end_line(meta)
@@ -2157,6 +2242,10 @@ defmodule FreedomFormatter.Formatter do
 
   defp keyword_key?(_) do
     false
+  end
+
+  defp eol?(meta) do
+    Keyword.get(meta, :eol, false)
   end
 
   defp line(meta) do
