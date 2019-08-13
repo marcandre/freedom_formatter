@@ -6,7 +6,7 @@ defmodule FreedomFormatter.MixProject do
       app: :freedom_formatter,
       description: "A fork of the Elixir code formatter, with added freedom",
       version: "1.0.0",
-      elixir: "~> 1.6",
+      elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
