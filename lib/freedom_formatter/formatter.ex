@@ -200,6 +200,7 @@ defmodule FreedomFormatter.Formatter do
       operand_nesting: 2,
       skip_eol: false,
       trailing_comma: Keyword.get(opts, :trailing_comma, false),
+      single_clause_on_do: Keyword.get(opts, :single_clause_on_do, false),
       comments: comments,
       sigils: sigils,
       file: file
@@ -1221,6 +1222,14 @@ defmodule FreedomFormatter.Formatter do
     [{key, line, end_line, value}]
   end
 
+  defp do_end_blocks_to_algebra(
+         [{:do, line, end_line, [{:->, _, _}] = value}],
+         %{single_clause_on_do: true} = state
+       ) do
+    {doc, state} = do_end_block_to_algebra(@empty, line, end_line, value, state)
+    {doc, state}
+  end
+
   defp do_end_blocks_to_algebra([{:do, line, end_line, value} | blocks], state) do
     {acc, state} = do_end_block_to_algebra(@empty, line, end_line, value, state)
 
@@ -1228,6 +1237,19 @@ defmodule FreedomFormatter.Formatter do
       {doc, state} = do_end_block_to_algebra(Atom.to_string(key), line, end_line, value, state)
       {line(acc, doc), state}
     end)
+  end
+
+  defp do_end_block_to_algebra(
+         key_doc,
+         line,
+         end_line,
+         [{:->, _, _}] = value,
+         %{single_clause_on_do: true} = state
+       ) do
+    case clauses_to_algebra(value, line, end_line, state) do
+      {@empty, state} -> {key_doc, state}
+      {value_doc, state} -> {key_doc |> space(value_doc), state}
+    end
   end
 
   defp do_end_block_to_algebra(key_doc, line, end_line, value, state) do
@@ -1792,6 +1814,17 @@ defmodule FreedomFormatter.Formatter do
     else
       doc
     end
+  end
+
+  defp clauses_to_algebra(
+         [{:->, _, _}] = clauses,
+         min_line,
+         max_line,
+         %{single_clause_on_do: true} = state
+       ) do
+    [clause] = add_max_line_to_last_clause(clauses, max_line)
+    {clause_doc, state} = clause_to_algebra(clause, min_line, state)
+    {clause_doc |> maybe_force_clauses([clause], state), state}
   end
 
   defp clauses_to_algebra([{:->, _, _} | _] = clauses, min_line, max_line, state) do
