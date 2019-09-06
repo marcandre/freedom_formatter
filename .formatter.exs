@@ -10,4 +10,5 @@
     assert_same: 2
   ],
   # trailing_comma: false, # false/true
+  # single_clause_on_do: false, # false/true
 ]
