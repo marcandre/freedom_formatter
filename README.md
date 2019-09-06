@@ -27,6 +27,20 @@ example = %{
 }
 ```
 
+- `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
+
+```elixir
+# single_clause_on_do: false
+case expr do
+  pattern -> body
+end
+
+# single_clause_on_do: true
+case expr do pattern ->
+  body
+end
+```
+
 ## Usage
 
 Install by adding the package to your `mix.exs`

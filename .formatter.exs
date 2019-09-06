@@ -13,4 +13,5 @@
     FreedomFormatter,
   ]
   # trailing_comma: true (or false)
+  # single_clause_on_do: true (or false)
 ]
