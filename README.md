@@ -54,6 +54,20 @@ options, as well as:
   or pair in the data structure. Does not affect argument lists,
   tuples, or lists/maps/structs rendered on a single line.
 
+* `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
+
+```elixir
+# single_clause_on_do: false
+case expr do
+  pattern -> body
+end
+
+# single_clause_on_do: true
+case expr do pattern ->
+  body
+end
+```
+
 ## Authorship and License
 
 Freedom Formatter is released under the same license as Elixir itself,
@@ -63,8 +77,6 @@ Freedom Formatter is based upon the Elixir code formatter, whose
 implementation and tests are included in this project.
 The core Elixir formatter was written by José Valim, with
 contributions from Andrea Leopardi and others.
-
-Customizations to the formatter are written by Pete Gamache.
 
 Authored by Pete Gamache.
 Basic maintance by Marc-André Lafortune.
