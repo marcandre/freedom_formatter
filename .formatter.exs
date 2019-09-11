@@ -8,5 +8,7 @@
     assert_format: 3,
     assert_same: 1,
     assert_same: 2
-  ]
+  ],
+  # single_clause_on_do: false, # false/true
+  # trailing_comma: false, # false/true
 ]
