@@ -5,8 +5,8 @@ defmodule FreedomFormatter.MixProject do
     [
       app: :freedom_formatter,
       description: "A fork of the Elixir code formatter, with added freedom",
-      version: "1.0.0",
-      elixir: "~> 1.8",
+      version: "1.1.3",
+      elixir: "~> 1.12.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
@@ -19,8 +19,11 @@ defmodule FreedomFormatter.MixProject do
   def package do
     [
       licenses: ["Apache 2.0"],
-      maintainers: ["pete gamache <pete@gamache.org>"],
-      links: %{github: "https://github.com/gamache/freedom_formatter"}
+      maintainers: [
+        "pete gamache <pete@gamache.org>",
+        "Marc-André Lafortune <fformat@marc-andre.ca>",
+      ],
+      links: %{github: "https://github.com/marcandre/freedom_formatter"}
     ]
   end
 
