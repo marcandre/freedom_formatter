@@ -9,6 +9,24 @@ as well as additional features.
 
 ## Added Features
 
+- `:trailing_comma` - if set `true`, multi-line list, map, and
+  struct literals will include a trailing comma after the last item
+  or pair in the data structure. Does not affect argument lists nor
+  tuples. Does not affect lists/maps/structs rendered on a single line either.
+
+```elixir
+# trailing_comma: false
+example = %{
+  foo: 42,
+  bar: 44
+}
+# trailing_comma: true
+example = %{
+  foo: 42,
+  bar: 44,
+}
+```
+
 ## Usage
 
 Install by adding the package to your `mix.exs`
