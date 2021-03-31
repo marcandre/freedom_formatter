@@ -220,6 +220,7 @@ defmodule FreedomFormatter.Formatter do
       locals_without_parens: locals_without_parens ++ locals_without_parens(),
       operand_nesting: 2,
       skip_eol: false,
+      trailing_comma: Keyword.get(opts, :trailing_comma, false),
       comments: comments,
       sigils: sigils,
       file: file,
@@ -1606,7 +1607,7 @@ defmodule FreedomFormatter.Formatter do
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
 
     {args_doc, _join, state} =
-      args_to_algebra_with_comments(args, meta, false, :none, join, state, fun)
+      args_to_algebra_with_comments(args, meta, false, :trailing_comma?, join, state, fun)
 
     left_bracket = color_doc("[", :list, state.inspect_opts)
     right_bracket = color_doc("]", :list, state.inspect_opts)
@@ -1620,7 +1621,7 @@ defmodule FreedomFormatter.Formatter do
     {left_doc, state} = fun.(left, state)
 
     {right_doc, _join, state} =
-      args_to_algebra_with_comments(right, meta, false, :none, join, state, fun)
+      args_to_algebra_with_comments(right, meta, false, :trailing_comma?, join, state, fun)
 
     args_doc =
       left_doc
@@ -1635,7 +1636,7 @@ defmodule FreedomFormatter.Formatter do
     fun = &quoted_to_algebra(&1, :parens_arg, &2)
 
     {args_doc, _join, state} =
-      args_to_algebra_with_comments(args, meta, false, :none, join, state, fun)
+      args_to_algebra_with_comments(args, meta, false, :trailing_comma?, join, state, fun)
 
     do_map_to_algebra(name_doc, args_doc, state)
   end
@@ -1810,9 +1811,18 @@ defmodule FreedomFormatter.Formatter do
 
           [] when last_arg_mode == :none ->
             doc
+
+          [] when last_arg_mode == :trailing_comma? ->
+            if state.trailing_comma && join == :line && !Map.get(state, :trailing_cons?) do
+              concat_to_last_group(doc, ",")
+            else
+              doc
+            end
         end
 
-      {{doc, @empty, 1}, state}
+      trailing_cons? = match?([{:|, _, _}], args)
+
+      {{doc, @empty, 1}, Map.put(state, :trailing_cons?, trailing_cons?)}
     end
 
     # If skipping parens, we cannot extract the comments of the first
