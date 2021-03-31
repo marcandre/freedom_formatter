@@ -12,4 +12,5 @@
   plugins: [
     FreedomFormatter,
   ]
+  # trailing_comma: true (or false)
 ]
