@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Format do
+defmodule Mix.Tasks.Fformat do
   use Mix.Task
 
   @shortdoc "Formats the given files/patterns"
@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Format do
   @moduledoc """
   Formats the given files and patterns.
 
-      mix format mix.exs "lib/**/*.{ex,exs}" "test/**/*.{ex,exs}"
+      mix fformat mix.exs "lib/**/*.{ex,exs}" "test/**/*.{ex,exs}"
 
   If any of the files is `-`, then the output is read from stdin
   and written to stdout.
@@ -73,25 +73,25 @@ defmodule Mix.Tasks.Format do
   such option is not available in your editor of choice, adding the required
   integration is usually a matter of invoking:
 
-      cd $project && mix format $file
+      cd $project && mix fformat $file
 
   where `$file` refers to the current file and `$project` is the root of your
   project.
 
   It is also possible to format code across the whole project by passing a list
-  of patterns and files to `mix format`, as shown at the top of this task
+  of patterns and files to `mix fformat`, as shown at the top of this task
   documentation. This list can also be set in the `.formatter.exs` file under the
   `:inputs` key.
 
   ## Plugins
 
   It is possible to customize how the formatter behaves. Plugins must implement
-  the `Mix.Tasks.Format` behaviour. For example, imagine that your project uses
+  the `Mix.Tasks.Fformat` behaviour. For example, imagine that your project uses
   Markdown in two distinct ways: via a custom `~M` sigil and via files with the
   `.md` and `.markdown` extensions. A custom plugin would look like this:
 
       defmodule MixMarkdownFormatter do
-        @behaviour Mix.Tasks.Format
+        @behaviour Mix.Tasks.Fformat
 
         def features(_opts) do
           [sigils: [:M], extensions: [".md", ".markdown"]]
@@ -417,7 +417,7 @@ defmodule Mix.Tasks.Format do
   defp expand_args([], dot_formatter, formatter_opts_and_subs) do
     if no_entries_in_formatter_opts?(formatter_opts_and_subs) do
       Mix.raise(
-        "Expected one or more files/patterns to be given to mix format " <>
+        "Expected one or more files/patterns to be given to mix fformat " <>
           "or for a .formatter.exs file to exist with an :inputs or :subdirectories key"
       )
     end
@@ -601,18 +601,18 @@ defmodule Mix.Tasks.Format do
   end
 
   defp check!({[{:exit, :stdin, exception, stacktrace} | _], _not_formatted}) do
-    Mix.shell().error("mix format failed for stdin")
+    Mix.shell().error("mix fformat failed for stdin")
     reraise exception, stacktrace
   end
 
   defp check!({[{:exit, file, exception, stacktrace} | _], _not_formatted}) do
-    Mix.shell().error("mix format failed for file: #{Path.relative_to_cwd(file)}")
+    Mix.shell().error("mix fformat failed for file: #{Path.relative_to_cwd(file)}")
     reraise exception, stacktrace
   end
 
   defp check!({_exits, [_ | _] = not_formatted}) do
     Mix.raise("""
-    mix format failed due to --check-formatted.
+    mix fformat failed due to --check-formatted.
     The following files are not formatted:
 
     #{to_bullet_list(not_formatted)}
