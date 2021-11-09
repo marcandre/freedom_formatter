@@ -64,8 +64,25 @@ defmodule FreedomFormatter do
   @spec format_string!(binary, keyword) :: iodata
   def format_string!(string, opts \\ []) when is_binary(string) and is_list(opts) do
     line_length = Keyword.get(opts, :line_length, 98)
-    algebra = FreedomFormatter.Formatter.to_algebra!(string, opts)
-    Inspect.Algebra.format(algebra, line_length)
+
+    to_quoted_opts =
+      [
+        unescape: false,
+        warn_on_unnecessary_quotes: false,
+        literal_encoder: &{:ok, {:__block__, &2, [&1]}},
+        token_metadata: true
+      ] ++ opts
+
+    {forms, comments} = string_to_quoted_with_comments!(string, to_quoted_opts)
+
+    to_algebra_opts =
+      [
+        comments: comments
+      ] ++ opts
+
+    doc = Code.Formatter.to_algebra(forms, to_algebra_opts)
+
+    Inspect.Algebra.format(doc, line_length)
   end
 
   @doc """
