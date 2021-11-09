@@ -1,4 +1,4 @@
-defmodule Code.Formatter do
+defmodule FreedomFormatter.Formatter do
   @moduledoc false
   import Inspect.Algebra, except: [format: 2, surround: 3, surround: 4]
 
