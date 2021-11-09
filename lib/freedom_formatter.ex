@@ -20,14 +20,14 @@ defmodule FreedomFormatter do
         token_metadata: true
       ] ++ opts
 
-    {forms, comments} = string_to_quoted_with_comments!(string, to_quoted_opts)
+    {forms, comments} = Code.string_to_quoted_with_comments!(string, to_quoted_opts)
 
     to_algebra_opts =
       [
         comments: comments
       ] ++ opts
 
-    doc = Code.Formatter.to_algebra(forms, to_algebra_opts)
+    doc = FreedomFormatter.Formatter.to_algebra(forms, to_algebra_opts)
 
     Inspect.Algebra.format(doc, line_length)
   end
