@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2021 The Elixir Team
 # SPDX-FileCopyrightText: 2012 Plataformatec
 
-defmodule Code.Formatter do
+defmodule FreedomFormatter.Formatter do
   @moduledoc false
   import Inspect.Algebra, except: [format: 2, surround: 3, surround: 4]
 
