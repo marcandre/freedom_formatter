@@ -1632,14 +1632,20 @@ defmodule FreedomFormatter.Formatter do
             doc
 
           [] when last_arg_mode == :state ->
-            if state.trailing_comma && join == :line do
+            if !Map.get(state, :trailing_cons) && state.trailing_comma && join == :line do
               concat_to_last_group(doc, ",")
             else
               doc
             end
         end
 
-      {{doc, @empty, 1}, state}
+      trailing_cons =
+        case args do
+          [{:|, _, _}] -> true
+          _ -> false
+        end
+
+      {{doc, @empty, 1}, Map.put(state, :trailing_cons, trailing_cons)}
     end
 
     # If skipping parens, we cannot extract the comments of the first
