@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Fformat do
   use Mix.Task
 
-  @shortdoc "Formats the given files/patterns"
+  @shortdoc "Formats the given files/patterns (freedom-formatter)"
 
   @moduledoc """
   Formats the given files and patterns.
@@ -541,7 +541,10 @@ defmodule Mix.Tasks.Fformat do
           sigil <- find_sigils_from_plugins(plugin, formatter_opts),
           do: {sigil, &plugin.format(&1, &2 ++ formatter_opts)}
 
-    IO.iodata_to_binary([Code.format_string!(content, [sigils: sigils] ++ formatter_opts), ?\n])
+    IO.iodata_to_binary([
+      FreedomFormatter.format_string!(content, [sigils: sigils] ++ formatter_opts),
+      ?\n
+    ])
   end
 
   defp find_sigils_from_plugins(plugin, formatter_opts) do
