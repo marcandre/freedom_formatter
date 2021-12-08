@@ -6,23 +6,20 @@ defmodule Code.Formatter.TrailingCommaTest do
   import CodeFormatterHelpers
 
   @medium_length [line_length: 20]
-  @trailing_comma [
-    trailing_comma: true,
-    locals_without_parens: [field: 2]
-  ]
+  @trailing_comma [trailing_comma: true]
 
   describe "example" do
     test "it works" do
       assert_same """
-        foo(:bar, x | y)
+                  foo(:bar, x | y)
 
-        bar(%{
-          step: 0,
-        })
-        """, @trailing_comma
+                  bar(%{
+                    step: 0,
+                  })
+                  """,
+                  @trailing_comma
     end
   end
-
 
   describe "lists" do
     test "ignores `trailing_comma: true` for single-line lists" do
