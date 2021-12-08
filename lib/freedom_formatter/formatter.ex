@@ -1617,28 +1617,25 @@ defmodule FreedomFormatter.Formatter do
     arg_to_algebra = fn arg, args, state ->
       {doc, state} = fun.(arg, state)
 
-      {doc, state} =
+      doc =
         case args do
-          [{:|, _, _}] ->
-            {concat_to_last_group(doc, ","), Map.put(state, :trailing_cons, true)}
-
           [_ | _] ->
-            {concat_to_last_group(doc, ","), state}
+            concat_to_last_group(doc, ",")
 
           [] when last_arg_mode == :force_comma ->
-            {concat_to_last_group(doc, ","), state}
+            concat_to_last_group(doc, ",")
 
           [] when last_arg_mode == :next_break_fits ->
-            {next_break_fits(doc, :enabled), state}
+            next_break_fits(doc, :enabled)
 
           [] when last_arg_mode == :none ->
-            {doc, state}
+            doc
 
           [] when last_arg_mode == :state ->
-            if !Map.get(state, :trailing_cons) && state.trailing_comma && join == :line do
-              {concat_to_last_group(doc, ","), state}
+            if state.trailing_comma && join == :line do
+              concat_to_last_group(doc, ",")
             else
-              {doc, state}
+              doc
             end
         end
 
