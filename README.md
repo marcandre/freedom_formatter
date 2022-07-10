@@ -37,6 +37,16 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 ]
 ```
 
+An elixir bug ([fixed but not released yet](https://github.com/elixir-lang/elixir/issues/11915)) currently requires the app `FreedomFormatter` to be compiled first before attempting to format.
+
+```
+# Do this:
+mix deps.get
+mix compile
+# Before you do that:
+mix format
+```
+
 ## Why
 
 Elixir's code formatter does not intend to support trailing commas,
@@ -49,11 +59,11 @@ Thanks to software freedom, we can use tomorrow's formatter today.
 
 ## Project Goals
 
-* To provide a compatible alternative to the Elixir formatter,
+- To provide a compatible alternative to the Elixir formatter,
   available separately from the core Elixir distribution
-* To allow developers and teams to benefit from standardized code
+- To allow developers and teams to benefit from standardized code
   formatting while retaining a style they find more productive
-* To be a testbed for new formatting features and options,
+- To be a testbed for new formatting features and options,
   maintaining the easiest possible path to possible inclusion in
   core Elixir.
 
@@ -62,12 +72,12 @@ Thanks to software freedom, we can use tomorrow's formatter today.
 Freedom Formatter supports all Elixir's standard code formatting
 options, as well as:
 
-* `:trailing_comma` - if set `true`, multi-line list, map, and
+- `:trailing_comma` - if set `true`, multi-line list, map, and
   struct literals will include a trailing comma after the last item
   or pair in the data structure. Does not affect argument lists,
   tuples, or lists/maps/structs rendered on a single line.
 
-* `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
+- `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
 
 ```elixir
 # single_clause_on_do: false
@@ -96,9 +106,9 @@ Maintance by Marc-André Lafortune.
 
 ### Notes
 
-* This project uses semantic versioning.
-* This project gets a new branch for each new minor version of elixir (unless no change was made to the formatter).
-* Each new branch has its history completely rewritten.
+- This project uses semantic versioning.
+- This project gets a new branch for each new minor version of elixir (unless no change was made to the formatter).
+- Each new branch has its history completely rewritten.
 
 ### Changelog
 
