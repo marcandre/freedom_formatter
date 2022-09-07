@@ -215,6 +215,7 @@ defmodule FreedomFormatter.Formatter do
       operand_nesting: 2,
       skip_eol: false,
       trailing_comma: Keyword.get(opts, :trailing_comma, false),
+      local_pipe_with_parens: Keyword.get(opts, :local_pipe_with_parens, false),
       single_clause_on_do: Keyword.get(opts, :single_clause_on_do, false),
       comments: comments,
       sigils: sigils,
@@ -760,8 +761,12 @@ defmodule FreedomFormatter.Formatter do
     right_context = right_op_context(context)
     max_line = line(meta)
 
+    right_arg = add_parenthesis_in_pipe(state.local_pipe_with_parens, op, right_arg)
+
     {pipes, min_line} =
-      unwrap_pipes(left_arg, meta, left_context, [{{op, right_context}, right_arg}])
+      unwrap_pipes(left_arg, meta, left_context, state.local_pipe_with_parens, [
+        {{op, right_context}, right_arg}
+      ])
 
     fun = fn
       {{:root, context}, arg}, _args, state ->
@@ -875,14 +880,19 @@ defmodule FreedomFormatter.Formatter do
     end
   end
 
-  defp unwrap_pipes({op, meta, [left, right]}, _meta, context, acc)
+  defp unwrap_pipes({op, meta, [left, right]}, _meta, context, local_pipe_with_parens, acc)
        when op in @pipeline_operators do
     left_context = left_op_context(context)
     right_context = right_op_context(context)
-    unwrap_pipes(left, meta, left_context, [{{op, right_context}, right} | acc])
+
+    right = add_parenthesis_in_pipe(local_pipe_with_parens, op, right)
+
+    unwrap_pipes(left, meta, left_context, local_pipe_with_parens, [
+      {{op, right_context}, right} | acc
+    ])
   end
 
-  defp unwrap_pipes(left, meta, context, acc) do
+  defp unwrap_pipes(left, meta, context, _local_pipe_with_parens, acc) do
     min_line =
       case left do
         {_, meta, _} -> line(meta)
@@ -902,6 +912,13 @@ defmodule FreedomFormatter.Formatter do
     acc = [{{:right, context}, right} | acc]
     {Enum.reverse(acc), line(meta)}
   end
+
+  # Transforms `|> foo` into `|> foo()`; other cases are left as is
+  defp add_parenthesis_in_pipe(true, :|>, {fun, [line: line], nil}) when is_atom(fun) do
+    {fun, [closing: [line: line], line: line], []}
+  end
+
+  defp add_parenthesis_in_pipe(_flag, _op, right), do: right
 
   defp operand_to_algebra_with_comments(operands, meta, min_line, max_line, context, state, fun) do
     # If we are in a no_parens_one_arg expression, we actually cannot
