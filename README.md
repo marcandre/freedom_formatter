@@ -27,6 +27,25 @@ example = %{
 }
 ```
 
+- `:local_pipe_with_parens` - if set to `true`, will force pipes to local functions and no argument to have parenthesis. Default elixir formatter will accept pipes both with and without parenthesis:
+
+```elixir
+# local_pipe_with_parens: false
+[:only, :an, :example]
+|> hd()
+|> to_string
+
+# local_pipe_with_parens: true
+[:only, :an, :example]
+|> hd()
+|> to_string()
+```
+
+Note that this option results in code that technically is not identical (it has a different AST).
+While Elixir will interpret `a |> b` and `a |> b()` the same way, it is theoretically possible to write a macro that would handle `a |> b` differently from `a |> b()`. We know of no library that does that.
+This option will also prevent writing your own `defmacro foo |> bar do`; we know of no library that does this either (except Elixir itself).
+If you know of any such examples, please open an issue to let us know.
+
 - `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
 
 ```elixir
@@ -65,6 +84,7 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 
   # Additional options are now supported:
   trailing_comma: true,
+  local_pipe_with_parens: true,
 ]
 ```
 
