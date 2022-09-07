@@ -88,16 +88,6 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 ]
 ```
 
-An elixir bug ([fixed but not released yet](https://github.com/elixir-lang/elixir/issues/11915)) currently requires the app `FreedomFormatter` to be compiled first before attempting to format.
-
-```
-# Do this:
-mix deps.get
-mix compile
-# Before you do that:
-mix format
-```
-
 ## Why
 
 Elixir's code formatter does not intend to support trailing commas,
