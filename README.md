@@ -65,7 +65,7 @@ end
 Install by adding the package to your `mix.exs`
 
 ```elixir
-{:freedom_formatter, ">= 2.0.0", only: :dev}
+{:freedom_formatter, ">= 2.0.0", only: [:dev, :test]}
 ```
 
 Specify this package as a plugin for the formatter in `.formatter.exs`:
