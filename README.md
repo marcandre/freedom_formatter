@@ -88,7 +88,7 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 ]
 ```
 
-An elixir bug ([fixed but not released yet](https://github.com/elixir-lang/elixir/issues/11915)) currently requires the app `FreedomFormatter` to be compiled first before attempting to format.
+If you're running an Elixir version below 1.14.0 then an elixir bug ([#11915](https://github.com/elixir-lang/elixir/issues/11915)) requires the app `FreedomFormatter` to be compiled first before attempting to format.
 
 ```
 # Do this:
