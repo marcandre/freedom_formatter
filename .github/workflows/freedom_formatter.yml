@@ -11,7 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: elixir:1.14.0
+      image: elixir:1.18.0
 
     steps:
       - uses: actions/checkout@v2
