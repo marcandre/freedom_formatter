@@ -4,7 +4,7 @@ A fork of Elixir's code formatter, with added freedom.
 [![Build Status](https://travis-ci.org/gamache/freedom_formatter.svg?branch=master)](https://travis-ci.org/gamache/freedom_formatter) [![Hex.pm Version](http://img.shields.io/hexpm/v/freedom_formatter.svg?style=flat)](https://hex.pm/packages/freedom_formatter)
 
 Freedom Formatter is a formatter plugin for Elixir files (`.ex` and `.exs`).
-It supports all features of the standard code formatter (forked from Elixir 1.14.0),
+It supports all features of the standard code formatter (forked from Elixir 1.17.3),
 as well as additional features.
 
 ## Added Features
@@ -136,6 +136,8 @@ Maintance by Marc-André Lafortune.
 - Each new branch has its history completely rewritten.
 
 ### Changelog
+
+v2.1.1: Updated for Elixir 1.17.0+
 
 v2.1.0: Adds `local_pipe_with_parens` option. Requires Elixir 1.14.0+
 
