@@ -107,6 +107,17 @@ defmodule Code.Formatter.TrailingCommaTest do
 
       assert_same good_assoc_with_newlines, @trailing_comma ++ @medium_length
     end
+
+    test "works instantly on long lists" do
+      assert_format "[:this_is_a_list_that_will_be_broken_down_into, :multiple_lines_because_it_is_sooo_long]",
+                    """
+                    [
+                      :this_is_a_list_that_will_be_broken_down_into,
+                      :multiple_lines_because_it_is_sooo_long,
+                    ]
+                    """,
+                    @trailing_comma ++ @medium_length
+    end
   end
 
   describe "maps with update" do
