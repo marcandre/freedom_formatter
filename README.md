@@ -27,6 +27,8 @@ example = %{
 }
 ```
 
+- `:migrate_call_parens_on_pipe` - Copied from upcoming Elixir 1.19. Compatibility with FreedomFormatter's original name `:local_pipe_with_parens` is maintained
+
 - `:single_clause_on_do` - if set to `true`, will format `case` with single pattern with the pattern inline, like:
 
 ```elixir
@@ -65,6 +67,7 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 
   # Additional options are now supported:
   trailing_comma: true,
+  migrate_call_parens_on_pipe: true,
 ]
 ```
 
