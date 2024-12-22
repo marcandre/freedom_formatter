@@ -41,6 +41,8 @@ case expr do pattern ->
 end
 ```
 
+- `:local_pipe_with_parens` - FreedomFormatter introduced this feature for Elixir 1.14+, years before Elixir 1.19 introduced it under the name `:migrate_call_parens_on_pipe`. Compatibility maintained, either names can be used.
+
 ## Usage
 
 Install by adding the package to your `mix.exs`
@@ -65,6 +67,7 @@ Specify this package as a plugin for the formatter in `.formatter.exs`:
 
   # Additional options are now supported:
   trailing_comma: true,
+  migrate_call_parens_on_pipe: true,
 ]
 ```
 
