@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: cgbakker
     container:
       image: elixir:1.18.0
 
