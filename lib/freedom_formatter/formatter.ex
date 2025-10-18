@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021 The Elixir Team
+# SPDX-FileCopyrightText: 2012 Plataformatec
+
 defmodule FreedomFormatter.Formatter do
   @moduledoc false
   import Inspect.Algebra, except: [format: 2, surround: 3, surround: 4]
@@ -154,6 +158,7 @@ defmodule FreedomFormatter.Formatter do
   @doc """
   Converts the quoted expression into an algebra document.
   """
+  @spec to_algebra(Macro.t(), keyword()) :: Inspect.Algebra.t()
   def to_algebra(quoted, opts \\ []) do
     comments = Keyword.get(opts, :comments, [])
 
@@ -191,8 +196,7 @@ defmodule FreedomFormatter.Formatter do
     sigils = Keyword.get(opts, :sigils, [])
     migrate = Keyword.get(opts, :migrate, false)
     migrate_bitstring_modifiers = Keyword.get(opts, :migrate_bitstring_modifiers, migrate)
-    deprecated_option = Keyword.get(opts, :local_pipe_with_parens, migrate)
-    migrate_call_parens_on_pipe = Keyword.get(opts, :migrate_call_parens_on_pipe, deprecated_option)
+    migrate_call_parens_on_pipe = Keyword.get(opts, :migrate_call_parens_on_pipe, migrate)
     migrate_charlists_as_sigils = Keyword.get(opts, :migrate_charlists_as_sigils, migrate)
     migrate_unless = Keyword.get(opts, :migrate_unless, migrate)
     syntax_colors = Keyword.get(opts, :syntax_colors, [])
@@ -616,9 +620,12 @@ defmodule FreedomFormatter.Formatter do
       end
 
     doc =
-      with_next_break_fits(next_break_fits?(right_arg, state), right, fn right ->
-        concat(group(left), group(nest(glue(op, group(right)), 2, :break)))
-      end)
+      concat(
+        group(left),
+        with_next_break_fits(next_break_fits?(right_arg, state), right, fn right ->
+          nest(glue(op, right), 2, :break)
+        end)
+      )
 
     {doc, state}
   end
@@ -801,15 +808,13 @@ defmodule FreedomFormatter.Formatter do
     {right, state} =
       binary_operand_to_algebra(right_arg, right_context, state, op, op_info, :right, 0)
 
-    doc =
+    {op_string, right} =
       cond do
         op in @no_space_binary_operators ->
-          op_doc = color_doc(op_string, :operator, state.inspect_opts)
-          concat(concat(group(left), op_doc), group(right))
+          {op_string, group(right)}
 
         op in @no_newline_binary_operators ->
-          op_doc = color_doc(" " <> op_string <> " ", :operator, state.inspect_opts)
-          concat(concat(group(left), op_doc), group(right))
+          {" " <> op_string <> " ", group(right)}
 
         true ->
           eol? = eol?(meta, state)
@@ -817,14 +822,15 @@ defmodule FreedomFormatter.Formatter do
           next_break_fits? =
             op in @next_break_fits_operators and next_break_fits?(right_arg, state) and not eol?
 
-          with_next_break_fits(next_break_fits?, right, fn right ->
-            op_doc = color_doc(" " <> op_string, :operator, state.inspect_opts)
-            right = nest(glue(op_doc, group(right)), nesting, :break)
-            right = if eol?, do: force_unfit(right), else: right
-            concat(group(left), group(right))
-          end)
+          {" " <> op_string,
+           with_next_break_fits(next_break_fits?, right, fn right ->
+             right = nest(concat(break(), right), nesting, :break)
+             if eol?, do: force_unfit(right), else: right
+           end)}
       end
 
+    op_doc = color_doc(op_string, :operator, state.inspect_opts)
+    doc = concat(concat(group(left), op_doc), group(right))
     {doc, state}
   end
 
@@ -1261,7 +1267,7 @@ defmodule FreedomFormatter.Formatter do
         args_doc =
           if skip_parens? do
             left_doc
-            |> concat(next_break_fits(group(right_doc, :inherit), :enabled))
+            |> concat(group(right_doc, :optimistic))
             |> nest(:cursor, :break)
           else
             right_doc =
@@ -1269,8 +1275,7 @@ defmodule FreedomFormatter.Formatter do
               |> nest(2, :break)
               |> concat(break(""))
               |> concat(")")
-              |> group(:inherit)
-              |> next_break_fits(:enabled)
+              |> group(:optimistic)
 
             concat(nest(left_doc, 2, :break), right_doc)
           end
@@ -1313,13 +1318,11 @@ defmodule FreedomFormatter.Formatter do
           |> concat(args_doc)
           |> nest(2)
           |> concat(extra)
-          |> group()
 
         skip_parens? ->
           " "
           |> concat(args_doc)
           |> concat(extra)
-          |> group()
 
         true ->
           "("
@@ -1327,13 +1330,12 @@ defmodule FreedomFormatter.Formatter do
           |> nest(2, :break)
           |> concat(args_doc)
           |> concat(extra)
-          |> group()
       end
 
     if next_break_fits? do
-      {next_break_fits(doc, :disabled), state}
+      {group(doc, :pessimistic), state}
     else
-      {doc, state}
+      {group(doc), state}
     end
   end
 
@@ -1364,14 +1366,6 @@ defmodule FreedomFormatter.Formatter do
     [{key, line, end_line, value}]
   end
 
-  defp do_end_blocks_to_algebra(
-         [{:do, line, end_line, [{:->, _, _}] = value}],
-         %{single_clause_on_do: true} = state
-       ) do
-    {doc, state} = do_end_block_to_algebra(@empty, line, end_line, value, state)
-    {doc, state}
-  end
-
   defp do_end_blocks_to_algebra([{:do, line, end_line, value} | blocks], state) do
     {acc, state} = do_end_block_to_algebra(@empty, line, end_line, value, state)
 
@@ -1379,19 +1373,6 @@ defmodule FreedomFormatter.Formatter do
       {doc, state} = do_end_block_to_algebra(Atom.to_string(key), line, end_line, value, state)
       {line(acc, doc), state}
     end)
-  end
-
-  defp do_end_block_to_algebra(
-         key_doc,
-         line,
-         end_line,
-         [{:->, _, _}] = value,
-         %{single_clause_on_do: true} = state
-       ) do
-    case clauses_to_algebra(value, line, end_line, state) do
-      {@empty, state} -> {key_doc, state}
-      {value_doc, state} -> {key_doc |> space(value_doc), state}
-    end
   end
 
   defp do_end_block_to_algebra(key_doc, line, end_line, value, state) do
@@ -2020,17 +2001,6 @@ defmodule FreedomFormatter.Formatter do
     if multi_line_clauses?(clauses, state), do: force_unfit(doc), else: doc
   end
 
-  defp clauses_to_algebra(
-         [{:->, _, _}] = clauses,
-         min_line,
-         max_line,
-         %{single_clause_on_do: true} = state
-       ) do
-    [clause] = add_max_line_to_last_clause(clauses, max_line)
-    {clause_doc, state} = clause_to_algebra(clause, min_line, state)
-    {clause_doc |> maybe_force_clauses([clause], state), state}
-  end
-
   defp clauses_to_algebra([{:->, _, _} | _] = clauses, min_line, max_line, state) do
     [clause | clauses] = add_max_line_to_last_clause(clauses, max_line)
     {clause_doc, state} = clause_to_algebra(clause, min_line, state)
@@ -2368,11 +2338,14 @@ defmodule FreedomFormatter.Formatter do
   defp with_next_break_fits(condition, doc, fun) do
     if condition do
       doc
-      |> next_break_fits(:enabled)
+      |> group(:optimistic)
       |> fun.()
-      |> next_break_fits(:disabled)
+      |> group(:pessimistic)
     else
-      fun.(doc)
+      doc
+      |> group()
+      |> fun.()
+      |> group()
     end
   end
 
@@ -2539,16 +2512,16 @@ defmodule FreedomFormatter.Formatter do
 
   # Relying on the inner document is brittle and error prone.
   # It would be best if we had a mechanism to apply this.
-  defp concat_to_last_group({:doc_cons, left, right}, concat) do
-    {:doc_cons, left, concat_to_last_group(right, concat)}
+  defp concat_to_last_group([left | right], concat) do
+    [left | concat_to_last_group(right, concat)]
   end
 
   defp concat_to_last_group({:doc_group, group, mode}, concat) do
-    {:doc_group, {:doc_cons, group, concat}, mode}
+    {:doc_group, concat(group, concat), mode}
   end
 
   defp concat_to_last_group(other, concat) do
-    {:doc_cons, other, concat}
+    concat(other, concat)
   end
 
   defp ungroup_if_group({:doc_group, group, _mode}), do: group

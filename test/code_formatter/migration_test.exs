@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021 The Elixir Team
+
 Code.require_file("../test_helper.exs", __DIR__)
 
 defmodule Code.Formatter.MigrationTest do
@@ -24,6 +27,27 @@ defmodule Code.Formatter.MigrationTest do
 
       assert_format "<<0, 1::2-integer() <- x>>", "<<0, 1::2-integer <- x>>", @opts
       assert_same "<<0, 1::2-integer <- x>>", @opts
+    end
+  end
+
+  describe "migrate_call_parens_on_pipe: true" do
+    @opts [migrate_call_parens_on_pipe: true]
+
+    test "adds parentheses on the right operand" do
+      assert_format "x |> y", "x |> y()", @opts
+      assert_format "x |> y |> z", "x |> y() |> z()", @opts
+      assert_format "x |> y.z", "x |> y.z()", @opts
+      assert_format "x |> y.z.t", "x |> y.z.t()", @opts
+    end
+
+    test "does nothing within defmacro" do
+      assert_same "defmacro left |> right, do: ...", @opts
+    end
+
+    test "does nothing without the migrate_unless option" do
+      assert_same "x |> y"
+      assert_same "x |> y |> z"
+      assert_same "x |> y.z"
     end
   end
 
@@ -279,6 +303,14 @@ defmodule Code.Formatter.MigrationTest do
   describe "migrate: true" do
     test "enables :migrate_bitstring_modifiers" do
       assert_format "<<foo::binary()>>", "<<foo::binary>>", migrate: true
+    end
+
+    test "enables :migrate_call_parens_on_pipe" do
+      bad = "x |> y"
+
+      good = "x |> y()"
+
+      assert_format bad, good, migrate: true
     end
 
     test "enables :migrate_charlists_as_sigils" do
