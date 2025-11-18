@@ -1,7 +1,7 @@
 # 🇺🇸🇺🇸🇺🇸 Freedom Formatter 🇺🇸🇺🇸🇺🇸
 
 A fork of Elixir's code formatter, with added freedom.
-[![Build Status](https://travis-ci.org/gamache/freedom_formatter.svg?branch=master)](https://travis-ci.org/gamache/freedom_formatter) [![Hex.pm Version](http://img.shields.io/hexpm/v/freedom_formatter.svg?style=flat)](https://hex.pm/packages/freedom_formatter)
+[![Hex.pm Version](http://img.shields.io/hexpm/v/freedom_formatter.svg?style=flat)](https://hex.pm/packages/freedom_formatter)
 
 Freedom Formatter is a formatter plugin for Elixir files (`.ex` and `.exs`).
 It supports all features of the standard code formatter (forked from Elixir 1.19.1),
@@ -122,7 +122,7 @@ Maintance by Marc-André Lafortune.
   - Edit the release commit with up-to-date versions for package & Elixir
 - This project uses semantic versioning.
 
-### Changelog
+## Changelog
 
 v2.1.3: Updated for Elixir 1.19.0+
 
