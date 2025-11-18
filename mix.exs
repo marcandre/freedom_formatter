@@ -12,7 +12,8 @@ defmodule FreedomFormatter.MixProject do
       package: package(),
       aliases: [
         docs: "docs --source-url https://github.com/marcandre/freedom_formatter"
-      ]
+      ],
+      docs: &docs/0
     ]
   end
 
@@ -27,6 +28,14 @@ defmodule FreedomFormatter.MixProject do
     ]
   end
 
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md"]
+      # logo: "path/to/logo.png",
+    ]
+  end
+
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
@@ -37,7 +46,7 @@ defmodule FreedomFormatter.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.19", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.39", only: :dev, runtime: false}
     ]
   end
 end
